@@ -112,11 +112,14 @@ class Driver:
         follows_list = self.getFollows()
         self.driver.implicitly_wait(10)
         followers_list = self.getFollowers()
-        target_list = []
-        for follow in follows_list:
-            if not follow in followers_list:
-                target_list.append(follow)
-        print(target_list)
+        # target_list = []
+        # for follow in follows_list:
+        #     if not follow in followers_list:
+        #         target_list.append(follow)
+        target_list = set(follows_list) - set(followers_list)
+        with open("unf_list.txt", "w") as file:
+            for i in target_list:
+                file.write(str(i) + "\n")
                 
     def run(self):
         self.setUserInfo()
