@@ -16,7 +16,10 @@ class Config:
     password : str
     looking_username : str
     
-    def __init__(self, file_name : str):
+    def __init__(
+        self,
+        file_name : str
+        ) -> None:
         config = configparser.ConfigParser()
         config.read(file_name)
 
@@ -36,7 +39,10 @@ class InstaInfo:
     __follows_set : set[str]
     __unfollow_set : set[str]
 
-    def __init__(self, looking_username : str):
+    def __init__(
+        self,
+        looking_username : str
+        ) -> None:
         dir = "results"
         self.__path = f"{dir}/insta_{looking_username}.csv"
         if not os.path.exists(dir):
@@ -45,7 +51,9 @@ class InstaInfo:
         if not self.__read_df():
             self.__create_df()
             
-    def __read_df(self) -> bool:
+    def __read_df(
+        self
+        ) -> bool:
         try:
             self.__insta_df = pd.read_csv(self.__path, sep=";", columns=self.__columns)
             self.__old_unfollow_set = set(self.__insta_df["UNFOLLOW"])
@@ -55,27 +63,37 @@ class InstaInfo:
         except:
             return False
         
-    def __write_df(self) -> bool:
+    def __write_df(
+        self
+        ) -> bool:
         try:
             self.__insta_df.to_csv(self.__path, sep=";", columns=self.__columns, index=False)
             return True
         except:
             return False    
 
-    def __create_df(self) -> None:
+    def __create_df(
+        self
+        ) -> None:
         self.__old_unfollow_set = set()
         self.__old_followers_set = set()
         self.__old_follows_set = set()
         self.__insta_df = pd.DataFrame(columns=self.__columns)
     
-    def set_data(self, followers_set : set[str], follows_set : set[str]) -> None:
+    def set_data(
+        self,
+        followers_set : set[str],
+        follows_set : set[str]
+        ) -> None:
         self.__followers_set = followers_set
         self.__follows_set = follows_set
         self.__unfollow_set = set(self.__follows_set) - set(self.__followers_set)
         print("followers_set:\n", self.__followers_set)
         print("follows_set:\n", self.__follows_set)        
 
-    def compare_and_save(self) -> None:
+    def compare_and_save(
+        self
+        ) -> None:
         new_followers = list(self.__followers_set - self.__old_followers_set)
         new_follows = list(self.__follows_set - self.__old_follows_set)
         new_unfollow = list(self.__unfollow_set - self.__old_unfollow_set)
@@ -117,7 +135,11 @@ class Driver:
     __config : Config
     __insta_info : InstaInfo
     
-    def __init__(self, link: str, file_name :str):
+    def __init__(
+        self, 
+        link: str,
+        file_name :str
+        ) -> None:
         self.link = link
         # self.options = webdriver.ChromeOptions()
         # self.options.add_argument('--headless')
@@ -132,10 +154,15 @@ class Driver:
         self.__goWebSite()
         self.__insta_info = InstaInfo(self.__config.looking_username)
 
-    def __setUserInfo(self, file_name :str):
+    def __setUserInfo(
+        self, 
+        file_name :str
+        ) -> None:
         self.__config = Config(file_name)
 
-    def __goWebSite(self):
+    def __goWebSite(
+        self
+        ) -> None:
         if os.path.isfile(self.__cookies_name):
             cookies = pickle.load(open(self.__cookies_name, "rb"))
             self.__driver.get(self.link)
@@ -144,7 +171,9 @@ class Driver:
         else:
             self.__driver.get(self.link)
 
-    def __login(self):
+    def __login(
+        self
+        ) -> None:
         self.__driver.implicitly_wait(10)
         element_username = self.__driver.find_element("name", "username")
         self.__driver.implicitly_wait(10)
@@ -163,14 +192,21 @@ class Driver:
         pickle.dump(self.__driver.get_cookies(), open(self.__cookies_name, "wb"))
         print(self.__driver.get_cookies())
         
+    def __waiting_key(
+        self
+        ) -> None:
         # TODO: get key of 2 authenticator
-        input("waiting input key: ") 
+        input("waiting input key: (enter any way)")
         
-    def __profile(self):
+    def __profile(
+        self
+        ) -> None:
         self.__driver.get(f"{self.link}/{self.__config.looking_username}")
         self.__driver.implicitly_wait(10)
 
-    def __scrollDown(self):
+    def __scrollDown(
+        self
+        ) -> None:
         time.sleep(2)
         jsCode = """
         page = document.querySelector("._aano");
@@ -187,7 +223,10 @@ class Driver:
             if new_height == last_height:
                 break
     
-    def __getUsers(self, id):
+    def __getUsers(
+        self, 
+        id
+        ) -> set[str]:
         follow_button = self.__driver.find_element("xpath", f"/html/body/div[2]/div/div/div[2]/div/div/div[1]/div[1]/div[2]/div[2]/section/main/div/header/section/ul/li[{id}]/a")
         follow_button.click()        
         self.__driver.implicitly_wait(10)
@@ -203,20 +242,29 @@ class Driver:
         close_button.click()                    
         return user_set
         
-    def __getFollows(self):
+    def __getFollows(
+        self
+        ) -> list[str]:
         follows_id = 3
         return self.__getUsers(follows_id)
 
-    def __getFollowers(self):                                     
+    def __getFollowers(
+        self
+        ) -> list[str]:                           
         followers_id = 2
         return self.__getUsers(followers_id)
         
-    def __compare(self):
+    def __compare(
+        self
+        ) -> None:
         self.__insta_info.set_data(self.__getFollowers(), self.__getFollows())
         self.__insta_info.compare_and_save()
 
-    def run(self):
+    def run(
+        self
+        ) -> None:
         self.__login()
+        self.__waiting_key()
         self.__profile()
         self.__compare()
 
