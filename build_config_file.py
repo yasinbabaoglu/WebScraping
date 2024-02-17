@@ -7,5 +7,5 @@ config.set('user_info', 'username', 'your-username')
 config.set('user_info', 'password', 'your-password')
 config.set('user_info', 'looking_username', 'looking-username')
 
-with open("configfile.ini", 'w') as configfile:
+with open("config/config_file.ini", 'w') as configfile:
     config.write(configfile)

@@ -1,2 +1,4 @@
-*.ini
-.results/
+*results/
+*cookies/
+*__pycache__/
+*config/

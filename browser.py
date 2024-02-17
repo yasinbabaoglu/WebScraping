@@ -311,7 +311,7 @@ class Driver:
 
 
 if __name__ == "__main__":
-    file_name = "config_file.ini"
+    file_name = "config/config_file.ini"
     insta_link = "https://www.instagram.com"
     
     webScraper = Driver(insta_link, file_name)
