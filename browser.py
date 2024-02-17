@@ -5,8 +5,10 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from msedge.selenium_tools import Edge
 from msedge.selenium_tools import EdgeOptions
 import pickle
+import json
 import time
 import os
+import random
 
 import pandas as pd
 import numpy as np
@@ -152,7 +154,7 @@ class Driver:
         options.add_argument(f"--user-agent={user_agent}")
         self.__driver = Edge(EdgeChromiumDriverManager().install(), options=options)
         dir = "cookies"
-        self.__cookies_name = f"{dir}/{self.__config.username}.pkl"
+        self.__cookies_name = f"{dir}/{self.__config.username}.json"
         if not os.path.exists(dir):
             os.makedirs(dir)
         self.__goWebSite()
@@ -164,38 +166,66 @@ class Driver:
         ) -> None:
         self.__config = Config(file_name)
 
-    def __goWebSite(
+    def __wait(
+        self
+        ) -> None:
+        self.__driver.implicitly_wait(10)
+        
+    def __net_wait_random(
+        self,
+        max_wait_seconds :int = 2,
+        min_wait_seconds :int = 0
+        ) -> None:
+        random_wait = random.uniform(min_wait_seconds, max_wait_seconds)
+        time.sleep(random_wait)
+
+    def __saveCookies(
+        self
+        ) -> None:
+        cookies = self.__driver.get_cookies()
+        with open(self.__cookies_name, 'w') as file:
+            json.dump(cookies, file)
+        print('New Cookies saved successfully')
+    
+    def __loadCookies(
         self
         ) -> None:
         if os.path.isfile(self.__cookies_name):
-            cookies = pickle.load(open(self.__cookies_name, "rb"))
-            self.__driver.get(self.__link)
+            with open(self.__cookies_name, 'r') as file:
+                cookies = json.load(file)
             for cookie in cookies:
                 self.__driver.add_cookie(cookie)
         else:
-            self.__driver.get(self.__link)
+            print('No cookies file found')
+        self.__driver.refresh() # Refresh Browser after login
+        
+    def __goWebSite(
+        self
+        ) -> None:
+        self.__driver.get(self.__link)
+        self.__loadCookies()
 
     def __login(
         self
         ) -> None:
-        self.__driver.implicitly_wait(10)
+        self.__wait()
         element_username = self.__driver.find_element("name", "username")
-        self.__driver.implicitly_wait(10)
+        self.__wait()
         element_password = self.__driver.find_element("name", "password")
-        self.__driver.implicitly_wait(10)
+        self.__wait()
 
+        self.__net_wait_random(max_wait_seconds=1)
         element_username.send_keys(self.__config.username)
+        self.__net_wait_random(max_wait_seconds=1)
         element_password.send_keys(self.__config.password)
         self.__driver.implicitly_wait(1)
         
         element_login = self.__driver.find_element("xpath", "/html/body/div[2]/div/div/div[2]/div/div/div[1]/section/main/article/div[2]/div[1]/div[2]/form/div/div[3]/button")
-        self.__driver.implicitly_wait(10)
+        self.__wait()
+        self.__net_wait_random(max_wait_seconds=1)
         element_login.click()
-        self.__driver.implicitly_wait(10)
+        self.__wait()
 
-        pickle.dump(self.__driver.get_cookies(), open(self.__cookies_name, "wb"))
-        print(self.__driver.get_cookies())
-        
     def __waiting_key(
         self
         ) -> None:
@@ -206,12 +236,12 @@ class Driver:
         self
         ) -> None:
         self.__driver.get(f"{self.__link}/{self.__config.looking_username}")
-        self.__driver.implicitly_wait(10)
+        self.__wait()
 
     def __scrollDown(
         self
         ) -> None:
-        time.sleep(2)
+        self.__net_wait_random(2, 4)
         jsCode = """
         page = document.querySelector("._aano");
         page.scrollTo(0, page.scrollHeight);
@@ -221,8 +251,8 @@ class Driver:
         last_height = self.__driver.execute_script(jsCode)
         while True:
             new_height = last_height
-            time.sleep(2)
-            self.__driver.implicitly_wait(10)
+            self.__net_wait_random(2, 3)
+            self.__wait()
             last_height = self.__driver.execute_script(jsCode)
             if new_height == last_height:
                 break
@@ -231,30 +261,33 @@ class Driver:
         self, 
         id
         ) -> set[str]:
+        self.__net_wait_random()
         follow_button = self.__driver.find_element("xpath", f"/html/body/div[2]/div/div/div[2]/div/div/div[1]/div[1]/div[2]/div[2]/section/main/div/header/section/ul/li[{id}]/a")
         follow_button.click()        
-        self.__driver.implicitly_wait(10)
+        self.__wait()
         self.__scrollDown()
-        self.__driver.implicitly_wait(10)
+        self.__wait()
         user_set = set()
+        self.__net_wait_random()
         user_elements = self.__driver.find_elements_by_class_name("x1rg5ohu")
         for user in user_elements:
             if (not user.text.find(" ") == -1) or user.text == "":
                 continue
             user_set.add(user.text.replace("\nDoğrulanmış",""))
+        self.__net_wait_random()
         close_button = self.__driver.find_element("xpath", f"/html/body/div[6]/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[1]/div/div[3]/div/button")
         close_button.click()                    
         return user_set
         
     def __getFollows(
         self
-        ) -> list[str]:
+        ) -> set[str]:
         follows_id = 3
         return self.__getUsers(follows_id)
 
     def __getFollowers(
         self
-        ) -> list[str]:                           
+        ) -> set[str]:
         followers_id = 2
         return self.__getUsers(followers_id)
         
@@ -269,6 +302,9 @@ class Driver:
         ) -> None:
         self.__login()
         self.__waiting_key()
+        self.__net_wait_random()
+        self.__saveCookies()
+        self.__net_wait_random()
         self.__profile()
         self.__compare()
 
