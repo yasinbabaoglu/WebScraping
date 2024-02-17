@@ -140,17 +140,21 @@ class Driver:
         link: str,
         file_name :str
         ) -> None:
-        self.link = link
+        self.__link = link
         # self.options = webdriver.ChromeOptions()
         # self.options.add_argument('--headless')
         # self.options.add_argument('--disable-gpu')
         # self.__driver = webdriver.Chrome(chrome_options=self.options)
         self.__setUserInfo(file_name)
-        self.options = EdgeOptions()
-        self.options.add_argument('disable-gpu')
-        self.options.add_argument('--user-agent=your-user-agent')
-        self.__driver = Edge(EdgeChromiumDriverManager().install(), options=self.options)
-        self.__cookies_name = f"cookies_{self.__config.looking_username}.pkl"
+        options = EdgeOptions()
+        options.add_argument("disable-gpu")
+        user_agent = "your-user-agent"
+        options.add_argument(f"--user-agent={user_agent}")
+        self.__driver = Edge(EdgeChromiumDriverManager().install(), options=options)
+        dir = "cookies"
+        self.__cookies_name = f"{dir}/{self.__config.username}.pkl"
+        if not os.path.exists(dir):
+            os.makedirs(dir)
         self.__goWebSite()
         self.__insta_info = InstaInfo(self.__config.looking_username)
 
@@ -165,11 +169,11 @@ class Driver:
         ) -> None:
         if os.path.isfile(self.__cookies_name):
             cookies = pickle.load(open(self.__cookies_name, "rb"))
-            self.__driver.get(self.link)
+            self.__driver.get(self.__link)
             for cookie in cookies:
                 self.__driver.add_cookie(cookie)
         else:
-            self.__driver.get(self.link)
+            self.__driver.get(self.__link)
 
     def __login(
         self
@@ -201,7 +205,7 @@ class Driver:
     def __profile(
         self
         ) -> None:
-        self.__driver.get(f"{self.link}/{self.__config.looking_username}")
+        self.__driver.get(f"{self.__link}/{self.__config.looking_username}")
         self.__driver.implicitly_wait(10)
 
     def __scrollDown(
