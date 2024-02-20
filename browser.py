@@ -40,6 +40,7 @@ class InstaInfo:
     __followers_set : set[str]
     __follows_set : set[str]
     __unfollow_set : set[str]
+    __is_init_run : bool
 
     def __init__(
         self,
@@ -50,26 +51,35 @@ class InstaInfo:
         if not os.path.exists(dir):
             os.makedirs(dir)
         self.__columns = ["FOLLOWERS", "FOLLOWS", "UNFOLLOW", "NEW_FOLLOWERS", "NEW_FOLLOWS", "NEW_UNFOLLOW"]
-        if not self.__read_df():
+        self.__is_init_run = False
+        if not self.__read_df("looking_username"):
+            self.__is_init_run = True
             self.__create_df()
             
     def __read_df(
-        self
+        self,
+        looking_username : str
         ) -> bool:
         try:
             self.__insta_df = pd.read_csv(self.__path, sep=";", columns=self.__columns)
             self.__old_unfollow_set = set(self.__insta_df["UNFOLLOW"])
             self.__old_followers_set = set(self.__insta_df["FOLLOWERS"])
             self.__old_follows_set = set(self.__insta_df["FOLLOWS"])
+            dir = "backup"
+            backup_path = f"{dir}/backup_{looking_username}.csv"
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+            self.__write_df(backup_path)
             return True
         except:
             return False
         
     def __write_df(
-        self
+        self,
+        path : str
         ) -> bool:
         try:
-            self.__insta_df.to_csv(self.__path, sep=";", columns=self.__columns, index=False)
+            self.__insta_df.to_csv(path, sep=";", columns=self.__columns, index=False)
             return True
         except:
             return False    
@@ -96,9 +106,15 @@ class InstaInfo:
     def compare_and_save(
         self
         ) -> None:
-        new_followers = list(self.__followers_set - self.__old_followers_set)
-        new_follows = list(self.__follows_set - self.__old_follows_set)
-        new_unfollow = list(self.__unfollow_set - self.__old_unfollow_set)
+        if self.__is_init_run:
+            new_followers = list()
+            new_follows = list()
+            new_unfollow = list()
+        else:
+            new_followers = list(self.__followers_set - self.__old_followers_set)
+            new_follows = list(self.__follows_set - self.__old_follows_set)
+            new_unfollow = list(self.__unfollow_set - self.__old_unfollow_set)
+            
         unfollow = list(self.__unfollow_set)
         followers = list(self.__followers_set)
         follows = list(self.__follows_set)
@@ -119,6 +135,13 @@ class InstaInfo:
                              length["FOLLOWS"]]
                             )
         
+        new_followers.sort()
+        new_follows.sort()
+        new_unfollow.sort()
+        unfollow.sort()
+        followers.sort()
+        follows.sort()
+        
         self.__insta_df["NEW_FOLLOWERS"] = new_followers + (length["MAX"] - length["NEW_FOLLOWERS"]) * [np.nan]
         self.__insta_df["NEW_FOLLOWS"] = new_follows + (length["MAX"] - length["NEW_FOLLOWS"]) * [np.nan]
         self.__insta_df["NEW_UNFOLLOW"] = new_unfollow + (length["MAX"] - length["NEW_UNFOLLOW"]) * [np.nan]
@@ -126,7 +149,7 @@ class InstaInfo:
         self.__insta_df["FOLLOWERS"] = followers + (length["MAX"] - length["FOLLOWERS"]) * [np.nan]
         self.__insta_df["FOLLOWS"] = follows + (length["MAX"] - length["FOLLOWS"]) * [np.nan]
 
-        if not self.__write_df():
+        if not self.__write_df(self.__path):
             print(f"ERROR: Writing File Failed - {self.__path}")
         else:
             print(f"Finished Successfully - {self.__path}")
@@ -143,16 +166,16 @@ class Driver:
         file_name :str
         ) -> None:
         self.__link = link
-        # self.options = webdriver.ChromeOptions()
-        # self.options.add_argument('--headless')
-        # self.options.add_argument('--disable-gpu')
-        # self.__driver = webdriver.Chrome(chrome_options=self.options)
         self.__setUserInfo(file_name)
+        
         options = EdgeOptions()
-        options.add_argument("disable-gpu")
         user_agent = "your-user-agent"
         options.add_argument(f"--user-agent={user_agent}")
+        options.add_argument("disable-gpu")
+        options.add_argument("--enable-chrome-browser-cloud-management")
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.__driver = Edge(EdgeChromiumDriverManager().install(), options=options)
+
         dir = "cookies"
         self.__cookies_name = f"{dir}/{self.__config.username}.json"
         if not os.path.exists(dir):
@@ -203,6 +226,7 @@ class Driver:
         self
         ) -> None:
         self.__driver.get(self.__link)
+        self.__net_wait_random(1,3)
         self.__loadCookies()
 
     def __login(
@@ -300,14 +324,22 @@ class Driver:
     def run(
         self
         ) -> None:
-        self.__login()
-        self.__waiting_key()
+        try:
+            self.__login()
+            self.__waiting_key()
+        except:
+            print("key not necessary")
         self.__net_wait_random()
         self.__saveCookies()
         self.__net_wait_random()
         self.__profile()
         self.__compare()
 
+    def close(
+        self
+        ) -> None:
+        self.__driver.close()
+        
 
 
 if __name__ == "__main__":
@@ -316,5 +348,5 @@ if __name__ == "__main__":
     
     webScraper = Driver(insta_link, file_name)
     webScraper.run()
-    
+    webScraper.close()
     
