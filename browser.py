@@ -163,7 +163,8 @@ class Driver:
     def __init__(
         self, 
         link: str,
-        file_name :str
+        file_name :str,
+        is_hidden: bool = True
         ) -> None:
         self.__link = link
         self.__setUserInfo(file_name)
@@ -171,6 +172,9 @@ class Driver:
         options = EdgeOptions()
         user_agent = "your-user-agent"
         options.add_argument(f"--user-agent={user_agent}")
+        options.use_chromium = True
+        if is_hidden:
+            options.add_argument('headless')
         options.add_argument("disable-gpu")
         options.add_argument("--enable-chrome-browser-cloud-management")
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -301,6 +305,7 @@ class Driver:
         self.__net_wait_random()
         close_button = self.__driver.find_element("xpath", f"/html/body/div[6]/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[1]/div/div[3]/div/button")
         close_button.click()                    
+        print("getUsers")
         return user_set
         
     def __getFollows(
@@ -329,10 +334,12 @@ class Driver:
             self.__waiting_key()
         except:
             print("key not necessary")
+        print("LOGIN")
         self.__net_wait_random()
         self.__saveCookies()
         self.__net_wait_random()
         self.__profile()
+        print("PROFILE")
         self.__compare()
 
     def close(
